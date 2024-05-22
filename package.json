@@ -12,9 +12,11 @@
   "dependencies": {
     "@picovoice/pvrecorder-node": "^1.2.2",
     "assemblyai": "^4.4.1",
+    "base64-arraybuffer": "^1.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "fs": "^0.0.1-security",
     "multer": "^1.4.5-lts.1",
     "nodemon": "^3.1.0",
     "pdf-parse": "^1.1.1",

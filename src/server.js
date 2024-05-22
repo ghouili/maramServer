@@ -6,7 +6,12 @@ const path = require("path");
 const { v1: uuid } = require("uuid");
 const server = require("http").createServer(app);
 const pdf = require("pdf-parse");
+const base64Arraybuffer = require("base64-arraybuffer");
+const { AssemblyAI } = require("assemblyai");
 
+const client = new AssemblyAI({
+  apiKey: process.env.ASSEMBLYAI_API_KEY,
+});
 const io = require("socket.io")(server, {
   cors: { origin: "*" },
 });
@@ -45,18 +50,19 @@ io.on("connection", (socket) => {
     // io.emit("start-recording");
   });
 
-  socket.on("send_pdf", async ({ fileName, fileContent, roomName }) => {
+  socket.on("send_pdf", async ({ fileContent, roomName }) => {
     console.log("recieved data");
-    console.log(fileName);
+    // console.log(fileName);
     // console.log(fileContent);
 
     try {
       // Decode the base64 encoded content into a buffer
       const pdfBuffer = Buffer.from(fileContent, "base64");
 
+      console.log(pdfBuffer);
       pdf(pdfBuffer).then(function (data) {
-        // console.log(data.text);
-        socket.to(roomName).emit("send_pdf_text", {data: data.text});
+        console.log(data.text);
+        socket.to(roomName).emit("send_pdf_text", { data: data.text });
       });
     } catch (error) {
       console.error("Error processing PDF:", error);
@@ -64,10 +70,24 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("audio", ({ audioData }) => {
+  socket.on("audio", async ({ data, roomName }) => {
     console.log("Starting recording");
-    console.log(audioData);
-    socket.to(roomName).emit("message", {message});
+    const audioArrayBuffer = base64Arraybuffer.decode(data);
+    // console.log(audioArrayBuffer);
+    // Save the decoded audio data to a file
+    let audioUrl = `./src/uploads/${uuid()}.mp3`;
+    // let audioUrl = `./src/uploads/audio.mp3`;
+    fs.writeFileSync(audioUrl, Buffer.from(audioArrayBuffer));
+
+    console.log("transcript");
+    const params = {
+      audio: audioUrl,
+      language_detection: true,
+    };
+
+    const transcript = await client.transcripts.transcribe(params);
+    console.log(transcript.text);
+    socket.to(roomName).emit("recieve_text", { data: transcript.text });
   });
 
   socket.on("stop-recording", () => {
